@@ -15,6 +15,14 @@ var (
 	Redis *redis.Client
 )
 
+// New ...
+func New(address string) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		DB:   0,
+		Addr: address,
+	})
+}
+
 // MD5 calculates the MD5 hash of a string
 func MD5(raw string) string {
 	m := md5.New()
