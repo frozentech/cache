@@ -1,12 +1,12 @@
 package cache
 
 import (
-	"context"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 
-	"github.com/frozentech/random"
 	"github.com/go-redis/redis"
 )
 
@@ -15,23 +15,27 @@ var (
 	Redis *redis.Client
 )
 
+// MD5 calculates the MD5 hash of a string
+func MD5(raw string) string {
+	m := md5.New()
+	io.WriteString(m, raw)
+	return fmt.Sprintf("%x", m.Sum(nil))
+}
+
 // ID genetates the token id
 func ID(tablename string, id string) string {
-	return random.MD5(fmt.Sprintf("%s_%s", tablename, id))
+	return MD5(fmt.Sprintf("%s_%s", tablename, id))
 }
 
 // Get get record in memory
 func Get(model interface{}, tablename string, id string) (err error) {
-	var (
-		ctx = context.Background()
-	)
 
 	if Redis == nil {
 		err = fmt.Errorf("redis cache not initialize")
 		return
 	}
 
-	reply := Redis.Get(ctx, ID(tablename, id))
+	reply := Redis.Get(ID(tablename, id))
 
 	if err = reply.Err(); err != nil {
 		return
@@ -55,17 +59,14 @@ func Get(model interface{}, tablename string, id string) (err error) {
 }
 
 // Put put record in cache
-func Put(model interface{}, tablename string, id string, hour int) (err error) {
-	var (
-		ctx = context.Background()
-	)
+func Put(model interface{}, tablename string, id string, expiry int) (err error) {
 
 	if Redis == nil {
 		err = fmt.Errorf("redis cache not initialize")
 		return
 	}
 
-	status := Redis.Set(ctx, ID(tablename, id), BYTE(model), time.Hour*time.Duration(hour))
+	status := Redis.Set(ID(tablename, id), BYTE(model), time.Hour*time.Duration(expiry))
 	err = status.Err()
 	return
 
